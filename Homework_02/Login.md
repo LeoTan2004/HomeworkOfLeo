@@ -45,3 +45,14 @@ if (strcmp($name,"LeoTan")==0&& strcmp($pwd,"Leon")==0){//实际中可能要在�
 ?>
 ```
 
+### http通信过程
+```sequence
+DNS(local/remote)->>client:在接入互联网是会自动向网关获取DNS地址，也可手动配置
+client->DNS(local/remote):向DNS请求解析地址，先本地后远程
+DNS(local/remote)->client:返回解析后的ip地址
+client->serve:根据ip地址找到服务器，建立TCP/IP连接，并发送请求
+NOTE over  client,serve:三次握手
+serve->client:响应请求，返回数据
+
+```
+
