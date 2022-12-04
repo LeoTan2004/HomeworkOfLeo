@@ -16,38 +16,45 @@ class msg{
 }
 
 class userInfomation{
-    public $username;
-    public $sex;
-    public $age;
+    public  $sex;
+    public  $nickname;
+    public  $phone_num;
+    public  $qq;
+    public  $college;
+    public  $profession;
 
-    /**
-     * @param $username
-     * @param $sex
-     * @param $age
-     */
     public function __construct($s)
     {
-        if (!defined('AGE')){
-            define('AGE',uInfo::$age);
+        if (!defined('NICKNAME')){
+            define('NICKNAME',uInfo::$nickname);
         }
         if (!defined('SEX')){
             define('SEX',uInfo::$sex);
         }
-        if (!defined('I_USERNAME')){
-            define('I_USERNAME',uInfo::$username);
+        if (!defined('PHONE_NUM')){
+            define('PHONE_NUM',uInfo::$phone_num);
         }
-        $this->username = $s[I_USERNAME];
+        if (!defined('QQ')){
+            define('QQ',uInfo::$qq);
+        }
+        if (!defined('COLLEGE')){
+            define('COLLEGE',uInfo::$college);
+        }
+        if (!defined('PROFESSION')){
+            define('PROFESSION',uInfo::$profession);
+        }
+        $this->nickname=$s[NICKNAME];
+        $this->profession = $s[PROFESSION];
+        $this->college = $s[COLLEGE];
+        $this->qq = $s[QQ];
+        $this->phone_num  = $s[PHONE_NUM];
         $this->sex = $s[SEX];
-        $this->age = $s[AGE];
     }
 
 }
 class login{
     private $logic;
 
-    /**
-     * @param $logic
-     */
     public function __construct()
     {
         $this->logic = new logic_udb();
@@ -57,13 +64,17 @@ class login{
         if (empty($username)){
             return new msg(-1,"username is empty");
         }
-        $res =  $this->logic->searchUser($username);
+        $res =  $this->logic->searchUser_by_username($username);
         if (mysqli_fetch_assoc($res)==null){
             return new msg(-5,"exist already");
         }
         $this->logic->addUser($username,$password);
-        $res =  $this->logic->searchUser($username);
+        if (!defined("id")){
+            define("ID",udb::$id);
+        }
+        $res =  $this->logic->searchUser_by_username($username);
         if (mysqli_fetch_assoc($res)!=null){
+            mysqli_fetch_assoc($res)[ID];
             return new msg(0,"successful!");
         };
         return new msg(-2,"fail");
@@ -76,7 +87,7 @@ class login{
         if (empty($password)){
             return new msg(-1,"password is empty");
         }
-        $res = $this->logic->searchUser($username);
+        $res = $this->logic->searchUser_by_username($username);
         $res = mysqli_fetch_assoc($res);
         if (!defined('PASSWORD')){
             define('PASSWORD',udb::$password);
@@ -85,7 +96,11 @@ class login{
             return new msg(-4,"No found");
         }
         if (strcmp($password,$res[PASSWORD])==0){
-            return new msg(0,"login successfully");
+            if (!defined("id")){
+                define("ID",udb::$id);
+            }
+            $id = $res[ID];
+            return new msg(0,"login successfully,id = $id");
         }
         return new msg(-2,"password is not right!");
     }
@@ -97,14 +112,15 @@ class login{
         if (empty($password_former)||empty($password_change)){
             return new msg(-1,"password is empty");
         }
-        echo array($username,$password_change,$password_former);
-        $res = $this->logic->searchUser($username);
+//        echo array($username,$password_change,$password_former);
+        $res = $this->logic->searchUser_by_username($username);
         $res = mysqli_fetch_assoc($res);
         if (!defined('PASSWORD')){
             define('PASSWORD',udb::$password);
         }
         if (strcmp($password_former,$res[PASSWORD])==0){
-            $this->logic->updateUser($username,$password_change);
+            $id = $this->logic->getId($username);
+            $this->logic->updateUser($id,$password_change);
             if ($this->sign_in($username,$password_change)->code==0){
                 return new msg(0,"changed successfally");
             }else{
@@ -122,14 +138,14 @@ class login{
         if (empty($password)){
             return new msg(-1,"password is empty");
         }
-        $res = $this->logic->searchUser($username);
+        $res = $this->logic->searchUser_by_username($username);
         $res = mysqli_fetch_assoc($res);
         if (!defined('PASSWORD')){
             define('PASSWORD',udb::$password);
         }
         if (strcmp($password,$res[PASSWORD])==0){
             $this->logic->deleteUser($username);
-            $res =  $this->logic->searchUser($username);
+            $res =  $this->logic->searchUser_by_username($username);
             if (mysqli_fetch_assoc($res)==null){
                 return new msg(0,"delete successful!");
             }else{
@@ -146,55 +162,48 @@ class doInfo{
     {
         $this->Info = new logic_uInfo();
     }
-    public function getInfo(String $username){
-        $res = $this->Info->searchInfo($username);
+    public function getInfo(int $id){
+        $res = $this->Info->searchInfo($id);
         $res = mysqli_fetch_assoc($res);
         if ($res==null){
             return new msg(-4,"No found");
         }
         return new userInfomation($res);
     }
-    public function updateInfo(String $username,int $age=-1,String $sex =""){
-        $res = $this->getInfo($username);
+    public function updateInfo(int $id,string $nickname){
+        $res = $this->getInfo($id);
         $res = mysqli_fetch_assoc($res);
         if ($res==null){
             return new msg(-4,"No found");
         }
-        if (!defined('AGE')){
-            define('AGE',uInfo::$age);
+
+        if (!defined('NICKNAME')){
+            define('NICKNAME',uInfo::$nickname);
         }
-        if (!defined('SEX')){
-            define('SEX',uInfo::$sex);
+
+        if ($nickname==""){
+            $nickname=$res[NICKNAME];
         }
-        if (!defined('I_USERNAME')){
-            define('I_USERNAME',uInfo::$username);
-        }
-        if ($age==-1){
-            $age=$res[AGE];
-        }
-        if ($sex==""){
-            $sex=$res[SEX];
-        }
-        $this->Info->updateInfo($username,$age,$sex);
-        $res = mysqli_fetch_assoc($this->getInfo($username));
-        if ($res[AGE]==$age&&strcmp($res[SEX],$sex)==0){
+        $this->Info->updateInfo($id,$nickname);
+        $res = mysqli_fetch_assoc($this->getInfo($id));
+        if (strcmp($res[NICKNAME],$nickname)==0){
             return new msg(0,"changed successfully");
         }else{
             return new msg(-2,"changed failed");
         }
     }
 
-    public function addInfo(String $username,String $sex="UNKNOW",int $age=0)
+    public function addInfo($id,$nickname,$sex,$phone_num,$qq,$college,$profession)
     {
-        if (empty($username)){
-            return new msg(-1,"empty username");
+        if ($id = null){
+            return new msg(-1,"empty id");
         }
-        $res =  $this->Info->searchInfo($username);
+        $res =  $this->Info->searchInfo($id);
         if (mysqli_fetch_assoc($res)!=null){
             return new msg(-5,"exist already");
         }
-        $this->Info->addInfo($username,$sex,$age);
-        $res =  $this->Info->searchInfo($username);
+        $this->Info->addInfo($id,$nickname,$sex,$phone_num,$qq,$college,$profession);
+        $res =  $this->Info->searchInfo($id);
         if (mysqli_fetch_assoc($res)!=null){
             return new msg(0,"successfully");
         }
